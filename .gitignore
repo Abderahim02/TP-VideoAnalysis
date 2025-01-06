@@ -1,0 +1,6 @@
+VideoFlow/demo*
+VideoFlow/flow*
+VideoFlow/VideoFlow_ckpt
+VideoFlow/drive*
+
+*.zip
