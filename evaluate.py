@@ -151,6 +151,8 @@ def process_datasets(dataset_dirs, method):
         results.append({'aEPE': aepe, 'aAE': aae, 'MSE': mse})
     return results
 
+
+
 def plot_metrics(metrics, labels):
     """
     Génère un histogramme des métriques pour plusieurs jeux de données.
