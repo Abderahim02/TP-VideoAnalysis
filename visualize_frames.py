@@ -16,7 +16,7 @@ class FrameNavigator:
         self.current_idx_real = 0  
 
         # Créer la figure et afficher les trois frames
-        self.fig, (self.ax_direct, self.ax_reverse, self.ax_real) = plt.subplots(1, 3, figsize=(15, 8))
+        self.fig, (self.ax_direct, self.ax_reverse, self.ax_real) = plt.subplots(1, 3, figsize=(12, 8))
         self.ax_direct.axis('off') 
         self.ax_reverse.axis('off')  
         self.ax_real.axis('off')  
@@ -24,10 +24,7 @@ class FrameNavigator:
         # Afficher la première image dans les trois axes
         self.img_direct = self.ax_direct.imshow(Image.open(self.direct_frames[self.current_idx_direct]))
         self.ax_direct.set_title(f"Direct: Frame {self.current_idx_direct + 1}/{len(self.direct_frames)}", fontsize=16)
-        
-        self.img_reverse = self.ax_reverse.imshow(Image.open(self.reverse_frames[self.current_idx_reverse]))
-        self.ax_reverse.set_title(f"Reverse: Frame {self.current_idx_reverse + 1}/{len(self.reverse_frames)}", fontsize=16)
-        
+
         self.img_real = self.ax_real.imshow(Image.open(self.real_frames[self.current_idx_real]))
         self.ax_real.set_title(f"Real: Frame {self.current_idx_real + 1}/{len(self.real_frames)}", fontsize=16)
 
@@ -38,11 +35,8 @@ class FrameNavigator:
         """Met à jour les images affichées pour les trois sens."""
         # Mise à jour des images directes
         self.img_direct.set_array(Image.open(self.direct_frames[self.current_idx_direct]))
-        self.ax_direct.set_title(f"Direct: Frame {self.current_idx_direct + 1}/{len(self.direct_frames)}", fontsize=16)
-        # Mise à jour des images inversées
-        self.img_reverse.set_array(Image.open(self.reverse_frames[self.current_idx_reverse]))
-        self.ax_reverse.set_title(f"Reverse: Frame {self.current_idx_reverse + 1}/{len(self.reverse_frames)}", fontsize=16)
-        # Mise à jour des images réelles
+        self.ax_direct.set_title(f"Direct: Frame {self.current_idx_direct + 1}/{len(self.real_frames)}", fontsize=16)
+
         self.img_real.set_array(Image.open(self.real_frames[self.current_idx_real]))
         self.ax_real.set_title(f"Real: Frame {self.current_idx_real + 1}/{len(self.real_frames)}", fontsize=16)
         self.fig.canvas.draw()
@@ -55,13 +49,6 @@ class FrameNavigator:
                 self.current_idx_direct = (self.current_idx_direct + 1) % len(self.direct_frames)
             elif event.button == 3:  # Clic droit : reculer
                 self.current_idx_direct = (self.current_idx_direct - 1) % len(self.direct_frames)
-
-        # Si on clique dans la partie du milieu (Reverse)
-        elif event.inaxes == self.ax_reverse:
-            if event.button == 1:  # Clic gauche : avancer
-                self.current_idx_reverse = (self.current_idx_reverse + 1) % len(self.reverse_frames)
-            elif event.button == 3:  # Clic droit : reculer
-                self.current_idx_reverse = (self.current_idx_reverse - 1) % len(self.reverse_frames)
 
         # Si on clique dans la partie droite (Real)
         elif event.inaxes == self.ax_real:
@@ -94,12 +81,12 @@ def load_frames(seq_dir, real_dir):
     direct_frames = []
     reverse_frames = []
 
-    for i in range(len(frames)):
-        if i % 2 == 0:
-            direct_frames.append(frames[i])  # Indices pairs : sens direct
-        else:
-            reverse_frames.append(frames[i])  # Indices impairs : sens inverse
-    # direct_frames, reverse_frames = frames, frames
+    # for i in range(len(frames)):
+    #     if i % 2 == 0:
+    #         direct_frames.append(frames[i])  # Indices pairs : sens direct
+    #     else:
+    #         reverse_frames.append(frames[i])  # Indices impairs : sens inverse
+    direct_frames, reverse_frames = frames, frames
     return direct_frames, reverse_frames, real_frames
 
 # Exemple d'utilisation

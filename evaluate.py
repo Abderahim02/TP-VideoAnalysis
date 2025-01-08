@@ -127,6 +127,7 @@ def compute_metrics_from_frames(flow1_dir, flow2_dir):
     mse = np.mean(mse)
     return aepe, aae, mse
 
+
 def process_datasets(dataset_dirs, method):
     """
     Calcule les métriques pour trois jeux de données en utilisant une méthode donnée.
