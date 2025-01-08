@@ -27,7 +27,7 @@ def prepare_image(seq_dir, batch_size):
         f for f in os.listdir(seq_dir)
         if os.path.isfile(os.path.join(seq_dir, f)) and f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff'))
     ])  
-    print("images_foun" , image_list)  
+    # print("images_foun" , image_list)  
     images = []
 
     for fn in image_list:
@@ -53,8 +53,8 @@ def vis_pre(flow_pre, vis_dir):
         os.makedirs(vis_dir)
 
     N = flow_pre.shape[0]
-    print("N = ", N)
-    print("flow_pre.shape = ", flow_pre.shape)
+    # print("N = ", N)
+    # print("flow_pre.shape = ", flow_pre.shape)
     for idx in range(N):
         flow_img = flow_viz.flow_to_image(flow_pre[idx].permute(1, 2, 0).numpy())
         image = Image.fromarray(flow_img)
@@ -86,7 +86,7 @@ def MOF_inference(model, cfg, batch_size=4):
         batch = batch[None].cuda()  # Ajouter une dimension pour le batch global
         padder = InputPadder(batch.shape)
         batch = padder.pad(batch)
-        print(batch.shape)
+        # print(batch.shape)
 
         # Faire une inférence sur le lot
         flow_pre, _ = model(batch, {})
@@ -122,6 +122,7 @@ def count_parameters(model):
     Compte les paramètres d'un modèle.
     """
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
