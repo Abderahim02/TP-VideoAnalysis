@@ -2,6 +2,7 @@ import numpy as np
 from PIL import Image
 import os
 import matplotlib.pyplot as plt
+import cv2
 def compute_metrics(flow1, flow2):
     """
     Compare two optical flows using aEPE, aAE, and MSE.
@@ -184,6 +185,130 @@ def plot_metrics(metrics, labels):
     plt.tight_layout()
     plt.show()
 
+
+def predict_next_frame_and_evaluate(frames_dir, flow_dir, output_dir):
+    """
+    Prend un répertoire de frames originales et un flux optique pour prédire les frames suivantes 
+    et évaluer les erreurs par rapport aux frames réelles.
+
+    Parameters:
+        frames_dir (str): Répertoire contenant les frames originales.
+        flow_dir (str): Répertoire contenant les flux optiques (.flo).
+        output_dir (str): Répertoire pour sauvegarder les frames prédites.
+    
+    Returns:
+        list of float: Liste des erreurs MSE pour chaque prédiction.
+    """
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    frame_paths = sorted([os.path.join(frames_dir, f) for f in os.listdir(frames_dir)
+                          if f.lower().endswith(('.png', '.jpg', '.jpeg'))])
+    flow_paths = sorted([os.path.join(flow_dir, f) for f in os.listdir(flow_dir)
+                         if f.lower().endswith('.flo')])
+
+    if len(frame_paths) - 1 != len(flow_paths):
+        raise ValueError("Le nombre de fichiers .flo doit correspondre au nombre de transitions entre frames." + str(len(frame_paths)) + " " + str(len(flow_paths)))
+
+    mse_list = []
+
+    for i in range(len(flow_paths)):
+        # Lire la frame actuelle et le flux optique
+        current_frame = np.array(Image.open(frame_paths[i])).astype(np.float32) / 255.0
+        optical_flow = read_flo_file(flow_paths[i])
+
+        # Prévoir la prochaine frame en utilisant le flux optique
+        height, width, _ = current_frame.shape
+        grid_x, grid_y = np.meshgrid(np.arange(width), np.arange(height))
+        next_frame_coords_x = (grid_x + optical_flow[..., 0]).clip(0, width - 1).astype(np.float32)
+        next_frame_coords_y = (grid_y + optical_flow[..., 1]).clip(0, height - 1).astype(np.float32)
+
+        next_frame_predicted = cv2.remap(current_frame, next_frame_coords_x, next_frame_coords_y,
+                                         interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+
+        # Lire la vraie prochaine frame
+        next_frame_actual = np.array(Image.open(frame_paths[i + 1])).astype(np.float32) / 255.0
+
+        # Calculer la MSE entre la frame prédite et la vraie frame
+        mse = np.mean((next_frame_predicted - next_frame_actual) ** 2)
+        mse_list.append(mse)
+
+        # Sauvegarder la frame prédite
+        predicted_frame_path = os.path.join(output_dir, f"predicted_frame_{i + 1:04d}.png")
+        Image.fromarray((next_frame_predicted * 255).astype(np.uint8)).save(predicted_frame_path)
+
+        # print(f"Frame {i + 1}: MSE = {mse:.6f}, sauvegardée dans {predicted_frame_path}")
+
+    return mse_list
+
+
+
+def predict_next_frame_and_evaluate_videoflow(frames_dir, flow_dir, output_dir):
+    """
+    Prend un répertoire de frames originales et un flux optique (sous forme d'images .jpg) 
+    pour prédire les frames suivantes et évaluer les erreurs par rapport aux frames réelles.
+
+    Parameters:
+        frames_dir (str): Répertoire contenant les frames originales.
+        flow_dir (str): Répertoire contenant les flux optiques (images .jpg).
+        output_dir (str): Répertoire pour sauvegarder les frames prédites.
+    
+    Returns:
+        list of float: Liste des erreurs MSE pour chaque prédiction.
+    """
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    frame_paths = sorted([os.path.join(frames_dir, f) for f in os.listdir(frames_dir)
+                          if f.lower().endswith(('.png', '.jpg', '.jpeg'))])
+    flow_paths = sorted([os.path.join(flow_dir, f) for f in os.listdir(flow_dir)
+                         if f.lower().endswith(('.png', '.jpg', '.jpeg'))])
+    # Gestion des tailles incohérentes
+    if len(frame_paths) > len(flow_paths) + 1:
+        frame_paths = frame_paths[:len(flow_paths) + 1]  # Ajuster les frames
+    elif len(flow_paths) > len(frame_paths) - 1:
+        flow_paths = flow_paths[:len(frame_paths) - 1]  # Ajuster les flux optiques
+
+    # Vérification finale
+    if len(frame_paths) - 1 != len(flow_paths):
+        raise ValueError("Le nombre de flux optiques doit correspondre au nombre de transitions entre frames."
+                         + f" Frames: {len(frame_paths)}, Flows: {len(flow_paths)}")
+
+    mse_list = []
+
+    for i in range(len(flow_paths)):
+        # Lire la frame actuelle et le flux optique
+        current_frame = np.array(Image.open(frame_paths[i])).astype(np.float32) / 255.0
+        optical_flow = np.array(Image.open(flow_paths[i])).astype(np.float32) / 255.0
+
+        # Séparer le flux optique en composantes (u, v)
+        optical_flow_u = optical_flow[..., 0] * 2 - 1  # Normalisation entre -1 et 1
+        optical_flow_v = optical_flow[..., 1] * 2 - 1  # Normalisation entre -1 et 1
+
+        # Prévoir la prochaine frame en utilisant le flux optique
+        height, width, _ = current_frame.shape
+        grid_x, grid_y = np.meshgrid(np.arange(width), np.arange(height))
+        next_frame_coords_x = (grid_x + optical_flow_u).clip(0, width - 1).astype(np.float32)
+        next_frame_coords_y = (grid_y + optical_flow_v).clip(0, height - 1).astype(np.float32)
+
+        next_frame_predicted = cv2.remap(current_frame, next_frame_coords_x, next_frame_coords_y,
+                                         interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+
+        # Lire la vraie prochaine frame
+        next_frame_actual = np.array(Image.open(frame_paths[i + 1])).astype(np.float32) / 255.0
+
+        # Calculer la MSE entre la frame prédite et la vraie frame
+        mse = np.mean((next_frame_predicted - next_frame_actual) ** 2)
+        mse_list.append(mse)
+
+        # Sauvegarder la frame prédite
+        predicted_frame_path = os.path.join(output_dir, f"predicted_frame_{i + 1:04d}.png")
+        Image.fromarray((next_frame_predicted * 255).astype(np.uint8)).save(predicted_frame_path)
+
+        # print(f"Frame {i + 1}: MSE = {mse:.6f}, sauvegardée dans {predicted_frame_path}")
+
+    return mse_list
+
 if __name__ == "__main__":
     import sys
     if len(sys.argv) < 8:
@@ -196,6 +321,43 @@ if __name__ == "__main__":
     flow1_dir3, flow2_dir3 = sys.argv[5], sys.argv[6]
     method = sys.argv[7]  # 'dl' ou 'classique'
 
+
+    # this to evaluate with GITW DATASET
+    # mse_errors_1 = predict_next_frame_and_evaluate("../GITW_selection_copy_reduced/Bowl/", "../GITW_selection_copy_reduced/Bowl_PCA/" , "../GITW_selection_copy_reduced/Bowl_PCA/pred/")
+    # mse_errors_2 = predict_next_frame_and_evaluate("../GITW_selection_copy_reduced/Rice/", "../GITW_selection_copy_reduced/Rice_PCA/" , "../GITW_selection_copy_reduced/Rice_PCA/pred/")
+    # mse_errors_3 = predict_next_frame_and_evaluate("../GITW_selection_copy_reduced/CanOFCocaCola/", "../GITW_selection_copy_reduced/CanOFCocaCola_PCA/" , "../GITW_selection_copy_reduced/CanOFCocaCola_PCA/pred/")
+    # mse_errors_1 = predict_next_frame_and_evaluate_videoflow("../GITW_selection_copy_reduced/Bowl/", "../GITW_selection_copy_reduced/Bowl_vis_full" , "../GITW_selection_copy_reduced/Bowl_vis_full/pred/")
+    # mse_errors_2 = predict_next_frame_and_evaluate_videoflow("../GITW_selection_copy_reduced/Rice/", "../GITW_selection_copy_reduced/Bowl_vis_full" , "../GITW_selection_copy_reduced/Rice_vis_full/pred/")
+    # mse_errors_3 = predict_next_frame_and_evaluate_videoflow("../GITW_selection_copy_reduced/CanOFCocaCola/", "../GITW_selection_copy_reduced/CanOFCocaCola_vis_full" , "../GITW_selection_copy_reduced/CanOFCocaCola_vis_full/pred/")
+    # je veux affichier les erreurs sous forme de histogramme pour les trois jeux de données
+
+    # Moyenne des MSE pour chaque jeu de données
+    # mse_means = [
+    #     np.mean(mse_errors_1),
+    #     np.mean(mse_errors_2),
+    #     np.mean(mse_errors_3)
+    # ]
+
+    # # Labels des jeux de données
+    # labels = ['GITW/Bowl', 'GITW/Rice', 'GITW/CanOFCocaCola']
+    # x = np.arange(len(labels))  # Positions des barres
+
+    # # Création de l'histogramme
+    # fig, ax = plt.subplots(figsize=(10, 6))
+    # ax.bar(x, mse_means, width=0.5, color=['blue', 'orange', 'green'])
+
+    # # Ajout des labels et titre
+    # ax.set_xlabel('Jeux de données')
+    # ax.set_ylabel('MSE moyenne')
+    # ax.set_title('MSE des prédictions de frames par jeu de données')
+    # ax.set_xticks(x)
+    # ax.set_xticklabels(labels)
+
+    # # Affichage
+    # plt.tight_layout()
+    # plt.show()
+
+    # Générer les étiquettes pour SINTEL DATASET
     # Traiter les trois jeux de données
     dataset_dirs = [(flow1_dir1, flow2_dir1), (flow1_dir2, flow2_dir2), (flow1_dir3, flow2_dir3)]
     metrics = process_datasets(dataset_dirs, method)
@@ -211,10 +373,6 @@ if __name__ == "__main__":
     width = 0.25  # Largeur des barres
 
     fig, ax = plt.subplots(figsize=(7, 4))
-    # for i in range (len(labels)):
-    #     ax.bar(x - width, aepe_values, width, label='aEPE')
-    #     ax.bar(x, aae_values, width, label='aAE')
-    # ax.bar(x , mse_values, width, label='MSE')
     ax.bar(x - width, aepe_values, width, label='aEPE')
     ax.bar(x, aae_values, width, label='aAE')
     # Configuration de l'axe

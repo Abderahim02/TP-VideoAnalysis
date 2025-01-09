@@ -20,9 +20,7 @@ def reduce_resolution(input_dir, output_dir, target_width, target_height):
 
         try:
             with Image.open(input_path) as img:
-                # Resize the image
                 img_resized = img.resize((target_width, target_height))
-                # Save to the output directory
                 img_resized.save(output_path)
                 print(f"Processed {file_name} -> {output_path}")
         except Exception as e:

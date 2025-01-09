@@ -154,6 +154,7 @@ class MOFNet(nn.Module):
             corr_fn = CorrBlock
         elif self.cfg.corr_fn == "efficient":
             corr_fn = AlternateCorrBlock
+        # print("B, N, H, W " , B, N, H, W )
         forward_corr_fn = corr_fn(fmaps[:, 1:N-1, ...].reshape(B*(N-2), -1, H//down_ratio, W//down_ratio), fmaps[:, 2:N, ...].reshape(B*(N-2), -1, H//down_ratio, W//down_ratio), num_levels=self.cfg.corr_levels, radius=self.cfg.corr_radius)
         backward_corr_fn = corr_fn(fmaps[:, 1:N-1, ...].reshape(B*(N-2), -1, H//down_ratio, W//down_ratio), fmaps[:, 0:N-2, ...].reshape(B*(N-2), -1, H//down_ratio, W//down_ratio), num_levels=self.cfg.corr_levels, radius=self.cfg.corr_radius)
 

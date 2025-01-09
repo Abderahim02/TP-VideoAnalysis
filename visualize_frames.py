@@ -80,19 +80,13 @@ def load_frames(seq_dir, real_dir):
     # Séparer les frames en deux listes : une pour le sens direct et l'autre pour l'inverse
     direct_frames = []
     reverse_frames = []
-
-    # for i in range(len(frames)):
-    #     if i % 2 == 0:
-    #         direct_frames.append(frames[i])  # Indices pairs : sens direct
-    #     else:
-    #         reverse_frames.append(frames[i])  # Indices impairs : sens inverse
     direct_frames, reverse_frames = frames, frames
     return direct_frames, reverse_frames, real_frames
 
 # Exemple d'utilisation
 if __name__ == "__main__":
     import sys
-    seq_dir = sys.argv[1]  # Chemin du répertoire des frames directes et inversées
+    seq_dir = sys.argv[1]  # Chemin du répertoire des frames 
     real_dir = sys.argv[2]  # Chemin du répertoire des frames réelles
 
     direct_frames, reversed_frames, real_frames = load_frames(seq_dir, real_dir)
